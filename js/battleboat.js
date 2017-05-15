@@ -6,19 +6,7 @@
 // Thanks to Nick Berry for the inspiration
 // http://www.datagenetics.com/blog/december32011/
 
-// TODO: Add a toggle that visualizes the probability grid via heatmap
-//       (scale a color via max and 0). The toggle only works once the user has
-//       finished placing their ships, or she can cheat easily by placing her ships
-//       outside the regions with the highest probability.
 
-console.log("%cHi! Thanks for checking out this game.%c Please be nice and don't " +
-	"hack the Stats object, I'm using Google Analytics to collect info about " +
-	"the AI's win/loss percentage in order to improve the bot, so if you do " +
-	"look around, I kindly ask that you don't give it bad data. Thanks :)",
-	"font-weight: bold; font-family: Tahoma, Helvetica, Arial, sans-serif;", "");
-console.log("Also, if you want to try stuff out, run %csetDebug(true);%c in the " +
-	"console before doing anything. You'll also get access to some cool features.",
-	"background: #000; color: #0f0; padding: 2px 5px; border-radius: 2px;", "");
 
 // Global Constants
 var CONST = {};
@@ -53,130 +41,6 @@ Game.usedShips = [CONST.UNUSED, CONST.UNUSED, CONST.UNUSED, CONST.UNUSED, CONST.
 CONST.USED = 1;
 CONST.UNUSED = 0;
 
-// Game Statistics
-function Stats(){
-	this.shotsTaken = 0;
-	this.shotsHit = 0;
-	this.totalShots = parseInt(localStorage.getItem('totalShots'), 10) || 0;
-	this.totalHits = parseInt(localStorage.getItem('totalHits'), 10) || 0;
-	this.gamesPlayed = parseInt(localStorage.getItem('gamesPlayed'), 10) || 0;
-	this.gamesWon = parseInt(localStorage.getItem('gamesWon'), 10) || 0;
-	this.uuid = localStorage.getItem('uuid') || this.createUUID();
-	if (DEBUG_MODE) {
-		this.skipCurrentGame = true;
-	}
-}
-Stats.prototype.incrementShots = function() {
-	this.shotsTaken++;
-};
-Stats.prototype.hitShot = function() {
-	this.shotsHit++;
-};
-Stats.prototype.wonGame = function() {
-	this.gamesPlayed++;
-	this.gamesWon++;
-	if (!DEBUG_MODE) {
-		ga('send', 'event', 'gameOver', 'win', this.uuid);
-	}
-};
-Stats.prototype.lostGame = function() {
-	this.gamesPlayed++;
-	if (!DEBUG_MODE) {
-		ga('send', 'event', 'gameOver', 'lose', this.uuid);
-	}
-};
-// Saves the game statistics to localstorage, also uploads where the user placed
-// their ships to Google Analytics so that in the future I'll be able to see
-// which cells humans are disproportionately biased to place ships on.
-Stats.prototype.syncStats = function() {
-	if(!this.skipCurrentGame) {
-		var totalShots = parseInt(localStorage.getItem('totalShots'), 10) || 0;
-		totalShots += this.shotsTaken;
-		var totalHits = parseInt(localStorage.getItem('totalHits'), 10) || 0;
-		totalHits += this.shotsHit;
-		localStorage.setItem('totalShots', totalShots);
-		localStorage.setItem('totalHits', totalHits);
-		localStorage.setItem('gamesPlayed', this.gamesPlayed);
-		localStorage.setItem('gamesWon', this.gamesWon);
-		localStorage.setItem('uuid', this.uuid);
-	} else {
-		this.skipCurrentGame = false;
-	}
-	
-	var stringifiedGrid = '';
-	for (var x = 0; x < Game.size; x++) {
-		for (var y = 0; y < Game.size; y++) {
-			stringifiedGrid += '(' + x + ',' + y + '):' + mainGame.humanGrid.cells[x][y] + ';\n';
-		}
-	}
-
-	if (!DEBUG_MODE) {
-		ga('send', 'event', 'humanGrid', stringifiedGrid, this.uuid);
-	}
-};
-// Updates the sidebar display with the current statistics
-Stats.prototype.updateStatsSidebar = function() {
-	var elWinPercent = document.getElementById('stats-wins');
-	var elAccuracy = document.getElementById('stats-accuracy');
-	elWinPercent.innerHTML = this.gamesWon + " of " + this.gamesPlayed;
-	elAccuracy.innerHTML = Math.round((100 * this.totalHits / this.totalShots) || 0) + "%";
-};
-// Reset all game vanity statistics to zero. Doesn't reset your uuid.
-Stats.prototype.resetStats = function(e) {
-	// Skip tracking stats until the end of the current game or else
-	// the accuracy percentage will be wrong (since you are tracking
-	// hits that didn't start from the beginning of the game)
-	Game.stats.skipCurrentGame = true;
-	localStorage.setItem('totalShots', 0);
-	localStorage.setItem('totalHits', 0);
-	localStorage.setItem('gamesPlayed', 0);
-	localStorage.setItem('gamesWon', 0);
-	localStorage.setItem('showTutorial', true);
-	Game.stats.shotsTaken = 0;
-	Game.stats.shotsHit = 0;
-	Game.stats.totalShots = 0;
-	Game.stats.totalHits = 0;
-	Game.stats.gamesPlayed = 0;
-	Game.stats.gamesWon = 0;
-	Game.stats.updateStatsSidebar();
-};
-Stats.prototype.createUUID = function(len, radix) {
-	/*!
-	Math.uuid.js (v1.4)
-	http://www.broofa.com
-	mailto:robert@broofa.com
-
-	Copyright (c) 2010 Robert Kieffer
-	Dual licensed under the MIT and GPL licenses.
-	*/
-	var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split(''),
-	uuid = [], i;
-	radix = radix || chars.length;
-
-	if (len) {
-		// Compact form
-		for (i = 0; i < len; i++) uuid[i] = chars[0 | Math.random()*radix];
-	} else {
-		// rfc4122, version 4 form
-		var r;
-
-		// rfc4122 requires these characters
-		uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
-		uuid[14] = '4';
-
-		// Fill in random data.  At i==19 set the high bits of clock sequence as
-		// per rfc4122, sec. 4.1.5
-		for (i = 0; i < 36; i++) {
-			if (!uuid[i]) {
-				r = 0 | Math.random()*16;
-				uuid[i] = chars[(i === 19) ? (r & 0x3) | 0x8 : r];
-			}
-		}
-	}
-
-	return uuid.join('');
-};
-
 // Game manager object
 // Constructor
 function Game(size) {
@@ -192,16 +56,11 @@ Game.prototype.checkIfWon = function() {
 	if (this.computerFleet.allShipsSunk()) {
 		alert('Congratulations, you win!');
 		Game.gameOver = true;
-		Game.stats.wonGame();
-		Game.stats.syncStats();
-		Game.stats.updateStatsSidebar();
-		this.showRestartSidebar();
+
 	} else if (this.humanFleet.allShipsSunk()) {
 		alert('Yarr! The computer sank all your ships. Try again.');
 		Game.gameOver = true;
-		Game.stats.lostGame();
-		Game.stats.syncStats();
-		Game.stats.updateStatsSidebar();
+
 		this.showRestartSidebar();
 	}
 };
@@ -256,10 +115,6 @@ Game.prototype.shootListener = function(e) {
 	}
 
 	if (result !== null && !Game.gameOver) {
-		Game.stats.incrementShots();
-		if (result === CONST.TYPE_HIT) {
-			Game.stats.hitShot();
-		}
 		// The AI shoots iff the player clicks on a cell that he/she hasn't
 		// already clicked on yet
 		self.robot.shoot();
@@ -282,7 +137,7 @@ Game.prototype.rosterListener = function(e) {
 	if (gameTutorial.currentStep === 1) {
 		gameTutorial.nextStep();
 	}
-	
+
 	// Set the class of the target ship to 'placing'
 	Game.placeShipType = e.target.getAttribute('id');
 	document.getElementById(Game.placeShipType).setAttribute('class', 'placing');
@@ -297,7 +152,7 @@ Game.prototype.placementListener = function(e) {
 		// Extract coordinates from event listener
 		var x = parseInt(e.target.getAttribute('data-x'), 10);
 		var y = parseInt(e.target.getAttribute('data-y'), 10);
-		
+
 		// Don't screw up the direction if the user tries to place again.
 		var successful = self.humanFleet.placeShip(x, y, Game.placeShipDirection, Game.placeShipType);
 		if (successful) {
@@ -317,7 +172,7 @@ Game.prototype.placementListener = function(e) {
 					if (gameTutorial.showTutorial) {
 						document.getElementById('start-game').setAttribute('class', 'highlight');
 					} else {
-						document.getElementById('start-game').removeAttribute('class');	
+						document.getElementById('start-game').removeAttribute('class');
 					}
 				}),false);
 				el.setAttribute('class', 'invisible');
@@ -420,7 +275,7 @@ Game.prototype.placeRandomly = function(e){
 // Ends placing the current ship
 Game.prototype.endPlacing = function(shipType) {
 	document.getElementById(shipType).setAttribute('class', 'placed');
-	
+
 	// Mark the ship as 'used'
 	Game.usedShips[CONST.AVAILABLE_SHIPS.indexOf(shipType)] = CONST.USED;
 
@@ -517,8 +372,7 @@ Game.prototype.init = function() {
 	this.computerFleet = new Fleet(this.computerGrid, CONST.COMPUTER_PLAYER);
 
 	this.robot = new AI(this);
-	Game.stats = new Stats();
-	Game.stats.updateStatsSidebar();
+
 
 	// Reset game variables
 	this.shotsTaken = 0;
@@ -538,7 +392,7 @@ Game.prototype.init = function() {
 		computerCells[j].addEventListener('click', this.shootListener, false);
 	}
 
-	// Add a click listener to the roster	
+	// Add a click listener to the roster
 	var playerRoster = document.querySelector('.fleet-roster').querySelectorAll('li');
 	for (var i = 0; i < playerRoster.length; i++) {
 		playerRoster[i].self = this;
@@ -559,8 +413,7 @@ Game.prototype.init = function() {
 	var startButton = document.getElementById('start-game');
 	startButton.self = this;
 	startButton.addEventListener('click', this.startGame, false);
-	var resetButton = document.getElementById('reset-stats');
-	resetButton.addEventListener('click', Game.stats.resetStats, false);
+	
 	var randomButton = document.getElementById('place-randomly');
 	randomButton.self = this;
 	randomButton.addEventListener('click', this.placeRandomly, false);
@@ -683,7 +536,7 @@ Fleet.prototype.placeShipsRandomly = function() {
 	var shipCoords;
 	for (var i = 0; i < this.fleetRoster.length; i++) {
 		var illegalPlacement = true;
-	
+
 		// Prevents the random placement of already placed ships
 		if(this.player === CONST.HUMAN_PLAYER && Game.usedShips[i] === CONST.USED) {
 			continue;
@@ -692,7 +545,7 @@ Fleet.prototype.placeShipsRandomly = function() {
 			var randomX = Math.floor(10*Math.random());
 			var randomY = Math.floor(10*Math.random());
 			var randomDirection = Math.floor(2*Math.random());
-			
+
 			if (this.fleetRoster[i].isLegal(randomX, randomY, randomDirection)) {
 				this.fleetRoster[i].create(randomX, randomY, randomDirection, false);
 				shipCoords = this.fleetRoster[i].getAllShipCells();
@@ -892,7 +745,7 @@ Ship.prototype.create = function(x, y, direction, virtual) {
 			}
 		}
 	}
-	
+
 };
 // direction === 0 when the ship is facing north/south
 // direction === 1 when the ship is facing east/west
@@ -1006,7 +859,7 @@ AI.prototype.shoot = function() {
 	var maxProbability = 0;
 	var maxProbCoords;
 	var maxProbs = [];
-	
+
 	// Add the AI's opening book to the probability grid
 	for (var i = 0; i < AI.OPENINGS.length; i++) {
 		var cell = AI.OPENINGS[i];
@@ -1031,7 +884,7 @@ AI.prototype.shoot = function() {
 	maxProbs[0];
 
 	var result = this.gameObject.shoot(maxProbCoords.x, maxProbCoords.y, CONST.HUMAN_PLAYER);
-	
+
 	// If the game ends, the next lines need to be skipped.
 	if (Game.gameOver) {
 		Game.gameOver = false;
@@ -1259,11 +1112,11 @@ if (!Array.prototype.map) {
 			throw new TypeError(" this is null or not defined");
 		}
 
-		// 1. Let O be the result of calling ToObject passing the |this| 
+		// 1. Let O be the result of calling ToObject passing the |this|
 		//    value as the argument.
 		var O = Object(this);
 
-		// 2. Let lenValue be the result of calling the Get internal 
+		// 2. Let lenValue be the result of calling the Get internal
 		//    method of O with the argument "length".
 		// 3. Let len be ToUint32(lenValue).
 		var len = O.length >>> 0;
@@ -1279,8 +1132,8 @@ if (!Array.prototype.map) {
 			T = thisArg;
 		}
 
-		// 6. Let A be a new array created as if by the expression new Array(len) 
-		//    where Array is the standard built-in constructor with that name and 
+		// 6. Let A be a new array created as if by the expression new Array(len)
+		//    where Array is the standard built-in constructor with that name and
 		//    len is the value of len.
 		A = new Array(len);
 
@@ -1294,35 +1147,35 @@ if (!Array.prototype.map) {
 
 			// a. Let Pk be ToString(k).
 			//   This is implicit for LHS operands of the in operator
-			// b. Let kPresent be the result of calling the HasProperty internal 
+			// b. Let kPresent be the result of calling the HasProperty internal
 			//    method of O with argument Pk.
 			//   This step can be combined with c
 			// c. If kPresent is true, then
 			if (k in O) {
 
-				// i. Let kValue be the result of calling the Get internal 
+				// i. Let kValue be the result of calling the Get internal
 				//    method of O with argument Pk.
 				kValue = O[k];
 
-				// ii. Let mappedValue be the result of calling the Call internal 
-				//     method of callback with T as the this value and argument 
+				// ii. Let mappedValue be the result of calling the Call internal
+				//     method of callback with T as the this value and argument
 				//     list containing kValue, k, and O.
 				mappedValue = callback.call(T, kValue, k, O);
 
 				// iii. Call the DefineOwnProperty internal method of A with arguments
-				// Pk, Property Descriptor 
-				// { Value: mappedValue, 
-				//   Writable: true, 
-				//   Enumerable: true, 
+				// Pk, Property Descriptor
+				// { Value: mappedValue,
+				//   Writable: true,
+				//   Enumerable: true,
 				//   Configurable: true },
 				// and false.
 
 				// In browsers that support Object.defineProperty, use the following:
-				// Object.defineProperty(A, k, { 
-				//   value: mappedValue, 
-				//   writable: true, 
-				//   enumerable: true, 
-				//   configurable: true 
+				// Object.defineProperty(A, k, {
+				//   value: mappedValue,
+				//   writable: true,
+				//   enumerable: true,
+				//   configurable: true
 				// });
 
 				// For best browser support, use the following:
