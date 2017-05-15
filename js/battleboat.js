@@ -30,13 +30,7 @@ CONST.TYPE_MISS = 2; // 2 = water with a cannonball in it (missed shot)
 CONST.TYPE_HIT = 3; // 3 = damaged ship (hit shot)
 CONST.TYPE_SUNK = 4; // 4 = sunk ship
 
-// TODO: Make this better OO code. CONST.AVAILABLE_SHIPS should be an array
-//       of objects rather than than two parallel arrays. Or, a better
-//       solution would be to store "USED" and "UNUSED" as properties of
-//       the individual ship object.
-// These numbers correspond to CONST.AVAILABLE_SHIPS
-// 0) 'carrier' 1) 'battleship' 2) 'destroyer' 3) 'submarine' 4) 'patrolboat'
-// This variable is only used when DEBUG_MODE === true.
+
 Game.usedShips = [CONST.UNUSED, CONST.UNUSED, CONST.UNUSED, CONST.UNUSED, CONST.UNUSED];
 CONST.USED = 1;
 CONST.UNUSED = 0;
@@ -45,7 +39,7 @@ CONST.UNUSED = 0;
 // Constructor
 function Game(size) {
 	Game.size = size;
-	this.shotsTaken = 0;
+
 	this.createGrid();
 	this.init();
 }
@@ -107,8 +101,6 @@ Game.prototype.shootListener = function(e) {
 	var result = null;
 	if (self.readyToPlay) {
 		result = self.shoot(x, y, CONST.COMPUTER_PLAYER);
-
-
 	}
 
 	if (result !== null && !Game.gameOver) {
@@ -121,30 +113,6 @@ Game.prototype.shootListener = function(e) {
 };
 
 
-// Click handler for the Rotate Ship button
-Game.prototype.toggleRotation = function(e) {
-	// Toggle rotation direction
-	var direction = parseInt(e.target.getAttribute('data-direction'), 10);
-	if (direction === Ship.DIRECTION_VERTICAL) {
-		e.target.setAttribute('data-direction', '1');
-		Game.placeShipDirection = Ship.DIRECTION_HORIZONTAL;
-	} else if (direction === Ship.DIRECTION_HORIZONTAL) {
-		e.target.setAttribute('data-direction', '0');
-		Game.placeShipDirection = Ship.DIRECTION_VERTICAL;
-	}
-};
-// Click handler for the Start Game button
-Game.prototype.startGame = function(e) {
-	var self = e.target.self;
-	var el = document.getElementById('roster-sidebar');
-	var fn = function() {el.setAttribute('class', 'hidden');};
-	el.addEventListener(transitionEndEventName(),fn,false);
-	el.setAttribute('class', 'invisible');
-	self.readyToPlay = true;
-
-
-	el.removeEventListener(transitionEndEventName(),fn,false);
-};
 // Click handler for Restart Game button
 Game.prototype.restartGame = function(e) {
 	e.target.removeEventListener(e.type, arguments.callee);
@@ -161,35 +129,8 @@ Game.prototype.placeRandomly = function(e){
 	document.getElementById('roster-sidebar').setAttribute('class', 'hidden');
 	this.setAttribute('class', 'hidden');
 };
-// Ends placing the current ship
-Game.prototype.endPlacing = function(shipType) {
-	document.getElementById(shipType).setAttribute('class', 'placed');
 
-	// Mark the ship as 'used'
-	Game.usedShips[CONST.AVAILABLE_SHIPS.indexOf(shipType)] = CONST.USED;
 
-	// Wipe out the variable when you're done with it
-	Game.placeShipDirection = null;
-	Game.placeShipType = '';
-	Game.placeShipCoords = [];
-};
-// Checks whether or not all ships are done placing
-// Returns boolean
-Game.prototype.areAllShipsPlaced = function() {
-	var playerRoster = document.querySelectorAll('.fleet-roster li');
-	for (var i = 0; i < playerRoster.length; i++) {
-		if (playerRoster[i].getAttribute('class') === 'placed') {
-			continue;
-		} else {
-			return false;
-		}
-	}
-	// Reset temporary variables
-	Game.placeShipDirection = 0;
-	Game.placeShipType = '';
-	Game.placeShipCoords = [];
-	return true;
-};
 // Resets the fog of war
 Game.prototype.resetFogOfWar = function() {
 	for (var i = 0; i < Game.size; i++) {
@@ -205,9 +146,6 @@ Game.prototype.resetFogOfWar = function() {
 Game.prototype.resetRosterSidebar = function() {
 
 		document.getElementById('roster-sidebar').removeAttribute('class');
-
-
-
 		document.getElementById('place-randomly').removeAttribute('class');
 
 };
@@ -250,15 +188,7 @@ Game.prototype.init = function() {
 
 	this.robot = new AI(this);
 
-
-	// Reset game variables
-	this.shotsTaken = 0;
 	this.readyToPlay = false;
-	this.placingOnGrid = false;
-	Game.placeShipDirection = 0;
-	Game.placeShipType = '';
-	Game.placeShipCoords = [];
-
 	this.resetRosterSidebar();
 
 	// Add a click listener for the Grid.shoot() method for all cells
@@ -368,28 +298,9 @@ Fleet.prototype.populate = function() {
 		this.fleetRoster.push(new Ship(CONST.AVAILABLE_SHIPS[j], this.playerGrid, this.player));
 	}
 };
-// Places the ship and returns whether or not the placement was successful
-// Returns boolean
-Fleet.prototype.placeShip = function(x, y, direction, shipType) {
-	var shipCoords;
-	for (var i = 0; i < this.fleetRoster.length; i++) {
-		var shipTypes = this.fleetRoster[i].type;
 
-		if (shipType === shipTypes &&
-			this.fleetRoster[i].isLegal(x, y, direction)) {
-			this.fleetRoster[i].create(x, y, direction, false);
-			shipCoords = this.fleetRoster[i].getAllShipCells();
-
-			for (var j = 0; j < shipCoords.length; j++) {
-				this.playerGrid.updateCell(shipCoords[j].x, shipCoords[j].y, 'ship', this.player);
-			}
-			return true;
-		}
-	}
-	return false;
-};
 // Places ships randomly on the board
-// TODO: Avoid placing ships too close to each other
+
 Fleet.prototype.placeShipsRandomly = function() {
 	var shipCoords;
 	for (var i = 0; i < this.fleetRoster.length; i++) {
@@ -623,15 +534,7 @@ function AI(gameObject) {
 	this.updateProbs();
 }
 AI.PROB_WEIGHT = 5000; // arbitrarily big number
-// how much weight to give to the opening book's high probability cells
-AI.OPEN_HIGH_MIN = 20;
-AI.OPEN_HIGH_MAX = 30;
-// how much weight to give to the opening book's medium probability cells
-AI.OPEN_MED_MIN = 15;
-AI.OPEN_MED_MAX = 25;
-// how much weight to give to the opening book's low probability cells
-AI.OPEN_LOW_MIN = 10;
-AI.OPEN_LOW_MAX = 20;
+
 // Amount of randomness when selecting between cells of equal probability
 AI.RANDOMNESS = 0.1;
 
@@ -642,7 +545,7 @@ AI.prototype.shoot = function() {
 	var maxProbCoords;
 	var maxProbs = [];
 
-	
+
 
 	for (var x = 0; x < Game.size; x++) {
 		for (var y = 0; y < Game.size; y++) {
@@ -764,12 +667,8 @@ AI.prototype.resetProbs = function() {
 		}
 	}
 };
-AI.prototype.metagame = function() {
-	// Inputs:
-	// Proximity of hit cells to edge
-	// Proximity of hit cells to each other
-	// Edit the probability grid by multiplying each cell with a new probability weight (e.g. 0.4, or 3). Set this as a CONST and make 1-CONST the inverse for decreasing, or 2*CONST for increasing
-};
+
+
 // Finds a human ship by coordinates
 // Returns Ship
 AI.prototype.findHumanShip = function(x, y) {
@@ -805,194 +704,8 @@ var mainGame = new Game(10);
 
 })();
 
-// Array.prototype.indexOf workaround for IE browsers that don't support it
-// From MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf
-if (!Array.prototype.indexOf) {
-	Array.prototype.indexOf = function (searchElement, fromIndex) {
-
-		var k;
-
-		// 1. Let O be the result of calling ToObject passing
-		//    the this value as the argument.
-		if (this === null || this === undefined) {
-			throw new TypeError('"this" is null or not defined');
-		}
-
-		var O = Object(this);
-
-		// 2. Let lenValue be the result of calling the Get
-		//    internal method of O with the argument "length".
-		// 3. Let len be ToUint32(lenValue).
-		var len = O.length >>> 0;
-
-		// 4. If len is 0, return -1.
-		if (len === 0) {
-			return -1;
-		}
-
-		// 5. If argument fromIndex was passed let n be
-		//    ToInteger(fromIndex); else let n be 0.
-		var n = +fromIndex || 0;
-
-		if (Math.abs(n) === Infinity) {
-			n = 0;
-		}
-
-		// 6. If n >= len, return -1.
-		if (n >= len) {
-			return -1;
-		}
-
-		// 7. If n >= 0, then Let k be n.
-		// 8. Else, n<0, Let k be len - abs(n).
-		//    If k is less than 0, then let k be 0.
-		k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-
-		// 9. Repeat, while k < len
-		while (k < len) {
-			var kValue;
-			// a. Let Pk be ToString(k).
-			//   This is implicit for LHS operands of the in operator
-			// b. Let kPresent be the result of calling the
-			//    HasProperty internal method of O with argument Pk.
-			//   This step can be combined with c
-			// c. If kPresent is true, then
-			//    i.  Let elementK be the result of calling the Get
-			//        internal method of O with the argument ToString(k).
-			//   ii.  Let same be the result of applying the
-			//        Strict Equality Comparison Algorithm to
-			//        searchElement and elementK.
-			//  iii.  If same is true, return k.
-			if (k in O && O[k] === searchElement) {
-				return k;
-			}
-			k++;
-		}
-		return -1;
-	};
-}
-
-// Array.prototype.map workaround for IE browsers that don't support it
-// From MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map
-// Production steps of ECMA-262, Edition 5, 15.4.4.19
-// Reference: http://es5.github.io/#x15.4.4.19
-if (!Array.prototype.map) {
-
-	Array.prototype.map = function(callback, thisArg) {
-
-		var T, A, k;
-
-		if (this == null) {
-			throw new TypeError(" this is null or not defined");
-		}
-
-		// 1. Let O be the result of calling ToObject passing the |this|
-		//    value as the argument.
-		var O = Object(this);
-
-		// 2. Let lenValue be the result of calling the Get internal
-		//    method of O with the argument "length".
-		// 3. Let len be ToUint32(lenValue).
-		var len = O.length >>> 0;
-
-		// 4. If IsCallable(callback) is false, throw a TypeError exception.
-		// See: http://es5.github.com/#x9.11
-		if (typeof callback !== "function") {
-			throw new TypeError(callback + " is not a function");
-		}
-
-		// 5. If thisArg was supplied, let T be thisArg; else let T be undefined.
-		if (arguments.length > 1) {
-			T = thisArg;
-		}
-
-		// 6. Let A be a new array created as if by the expression new Array(len)
-		//    where Array is the standard built-in constructor with that name and
-		//    len is the value of len.
-		A = new Array(len);
-
-		// 7. Let k be 0
-		k = 0;
-
-		// 8. Repeat, while k < len
-		while (k < len) {
-
-			var kValue, mappedValue;
-
-			// a. Let Pk be ToString(k).
-			//   This is implicit for LHS operands of the in operator
-			// b. Let kPresent be the result of calling the HasProperty internal
-			//    method of O with argument Pk.
-			//   This step can be combined with c
-			// c. If kPresent is true, then
-			if (k in O) {
-
-				// i. Let kValue be the result of calling the Get internal
-				//    method of O with argument Pk.
-				kValue = O[k];
-
-				// ii. Let mappedValue be the result of calling the Call internal
-				//     method of callback with T as the this value and argument
-				//     list containing kValue, k, and O.
-				mappedValue = callback.call(T, kValue, k, O);
-
-				// iii. Call the DefineOwnProperty internal method of A with arguments
-				// Pk, Property Descriptor
-				// { Value: mappedValue,
-				//   Writable: true,
-				//   Enumerable: true,
-				//   Configurable: true },
-				// and false.
-
-				// In browsers that support Object.defineProperty, use the following:
-				// Object.defineProperty(A, k, {
-				//   value: mappedValue,
-				//   writable: true,
-				//   enumerable: true,
-				//   configurable: true
-				// });
-
-				// For best browser support, use the following:
-				A[k] = mappedValue;
-			}
-			// d. Increase k by 1.
-			k++;
-		}
-
-		// 9. return A
-		return A;
-	};
-}
-
-// Browser compatability workaround for transition end event names.
-// From modernizr: http://stackoverflow.com/a/9090128
-function transitionEndEventName() {
-	var i,
-		undefined,
-		el = document.createElement('div'),
-		transitions = {
-			'transition':'transitionend',
-			'OTransition':'otransitionend',  // oTransitionEnd in very old Opera
-			'MozTransition':'transitionend',
-			'WebkitTransition':'webkitTransitionEnd'
-		};
-
-	for (i in transitions) {
-		if (transitions.hasOwnProperty(i) && el.style[i] !== undefined) {
-			return transitions[i];
-		}
-	}
-}
 
 // Returns a random number between min (inclusive) and max (exclusive)
 function getRandom(min, max) {
 	return Math.random() * (max - min) + min;
-}
-
-// Toggles on or off DEBUG_MODE
-function setDebug(val) {
-	DEBUG_MODE = val;
-	localStorage.setItem('DEBUG_MODE', val);
-//	localStorage.setItem('showTutorial', 'false');
-	window.location.reload();
 }
