@@ -299,15 +299,9 @@ Game.prototype.resetFogOfWar = function() {
 };
 // Resets CSS styling of the sidebar
 Game.prototype.resetRosterSidebar = function() {
-	var els = document.querySelector('.fleet-roster').querySelectorAll('li');
-	for (var i = 0; i < els.length; i++) {
-		els[i].removeAttribute('class');
-	}
-
 
 		document.getElementById('roster-sidebar').removeAttribute('class');
 
-	document.getElementById('rotate-button').removeAttribute('class');
 	document.getElementById('start-game').setAttribute('class', 'hidden');
 	if (DEBUG_MODE) {
 		document.getElementById('place-randomly').removeAttribute('class');
@@ -322,11 +316,7 @@ Game.prototype.showRestartSidebar = function() {
 	for (var j = 0; j < computerCells.length; j++) {
 		computerCells[j].removeEventListener('click', this.shootListener, false);
 	}
-	var playerRoster = document.querySelector('.fleet-roster').querySelectorAll('li');
-	for (var i = 0; i < playerRoster.length; i++) {
-		playerRoster[i].removeEventListener('click', this.rosterListener, false);
-	}
-
+	
 	var restartButton = document.getElementById('restart-game');
 	restartButton.addEventListener('click', this.restartGame, false);
 	restartButton.self = this;
@@ -375,12 +365,6 @@ Game.prototype.init = function() {
 		computerCells[j].addEventListener('click', this.shootListener, false);
 	}
 
-	// Add a click listener to the roster
-	var playerRoster = document.querySelector('.fleet-roster').querySelectorAll('li');
-	for (var i = 0; i < playerRoster.length; i++) {
-		playerRoster[i].self = this;
-		playerRoster[i].addEventListener('click', this.rosterListener, false);
-	}
 
 	// Add a click listener to the human player's grid while placing
 	var humanCells = document.querySelector('.human-player').childNodes;
@@ -391,8 +375,7 @@ Game.prototype.init = function() {
 		humanCells[k].addEventListener('mouseout', this.placementMouseout, false);
 	}
 
-	var rotateButton = document.getElementById('rotate-button');
-	rotateButton.addEventListener('click', this.toggleRotation, false);
+
 	var startButton = document.getElementById('start-game');
 	startButton.self = this;
 	startButton.addEventListener('click', this.startGame, false);
